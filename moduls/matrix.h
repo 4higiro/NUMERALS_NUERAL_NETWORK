@@ -1,10 +1,12 @@
+// Защита от повторного включения
 #pragma once
 
+// Класс матрицы
 class matrix
 {
 private:
-	float** data;
-	int rows, columns;
+	float** data; // Данные матрицы
+	int rows, columns; // Количество строк и столбцов
 public:
 	matrix();
 	void init(int rows, int columns);

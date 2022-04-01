@@ -1,34 +1,43 @@
+// Включаемые файлы
 #include <iostream>
 #include <math.h>
 
 #include "network.h"
 #include "matrix.h"
 
+// Используемые имена
 using namespace std;
 
+// Сигмоида
 float nueral_network::sigm(float x)
 {
 	return 1 / (1 + exp(-x));
 }
 
+// Производная сигмоиды
 float nueral_network::dSigm(float x)
 {
 	return x * (1 - x);
 }
 
+// Конструктор нейронной сети
 nueral_network::nueral_network()
 {
 	n = 0;
 	layers = nullptr;
 
 	weights = nullptr;
+	d_weights = nullptr;
+
 	nuerals = nullptr;
 	nuerals_errs = nullptr;
 
-	alpha = 5;
+	alpha = 0;
+	betta = 0;
 }
 
-void nueral_network::init(int* layers, int n)
+// Инициализация нейронной сети
+void nueral_network::init(int* layers, int n, float alpha, float betta)
 {
 	this->n = n;
 
@@ -44,10 +53,10 @@ void nueral_network::init(int* layers, int n)
 
 	for (int i = 0; i < n; i++)
 	{
-		nuerals[i] = new float[layers[i]];
-		nuerals_errs[i] = new float[layers[i]];
+		nuerals[i] = new float[this->layers[i]];
+		nuerals_errs[i] = new float[this->layers[i]];
 
-		for (int j = 0; j < layers[i]; j++)
+		for (int j = 0; j < this->layers[i]; j++)
 		{
 			nuerals[i][j] = 0;
 			nuerals_errs[i][j] = 0;
@@ -55,14 +64,21 @@ void nueral_network::init(int* layers, int n)
 	}
 
 	weights = new matrix[n - 1];
+	d_weights = new matrix[n - 1];
 
 	for (int i = 0; i < n - 1; i++)
 	{
 		weights[i].init(layers[i + 1], layers[i]);
-		weights[i].setRandom(i);
+		d_weights[i].init(layers[i + 1], layers[i]);
+		weights[i].setRandom(n - i * 2);
+		d_weights[i].setNULL();
 	}
+
+	this->alpha = alpha;
+	this->betta = betta;
 }
 
+// Очистка данных нейросети
 void nueral_network::clear()
 {
 	for (int i = 0; i < n; i++)
@@ -77,8 +93,12 @@ void nueral_network::clear()
 	delete[] layers;
 
 	n = 0;
+
+	alpha = 0;
+	betta = 0;
 }
 
+// Печать значений синапсов на экран
 void nueral_network::printWeights()
 {
 	cout << endl;
@@ -96,6 +116,7 @@ void nueral_network::printWeights()
 	cout << endl;
 }
 
+// Печать значений нейронов на экран
 void nueral_network::printNuerals()
 {
 	cout << endl;
@@ -119,6 +140,7 @@ void nueral_network::printNuerals()
 	cout << endl;
 }
 
+// Прямое распространение
 int nueral_network::forwordPropagetion(float& value, float* vector)
 {
 	for (int i = 0; i < layers[0]; i++)
@@ -153,25 +175,27 @@ int nueral_network::forwordPropagetion(float& value, float* vector)
 
 	value = nuerals[n - 1][max];
 
+	if (layers[n - 1] == 1)
+	{
+		if (nuerals[n - 1][0] > 0.6)
+			return 1;
+		else
+			return 0;
+	}
+
 	return max;
 }
 
-void nueral_network::backPropagetion(float* example, float* p)
+// Обратное распространение
+float nueral_network::backPropagetion(float* example, float* p)
 {
 	float value = 0;
 
 	forwordPropagetion(value, example);
 
-	float** current = new float* [n];
-
-	for (int i = 0; i < n; i++)
-	{
-		current[i] = new float[layers[i]];
-	}
-
 	for (int i = 0; i < layers[n - 1]; i++)
 	{
-		current[n - 1][i] = (nuerals[n - 1][i] - p[i]) * dSigm(nuerals[n - 1][i]);
+		nuerals_errs[n - 1][i] = (p[i] - nuerals[n - 1][i]) * dSigm(nuerals[n - 1][i]);
 	}
 
 	for (int i = n - 2; i >= 0; i--)
@@ -182,26 +206,37 @@ void nueral_network::backPropagetion(float* example, float* p)
 
 			for (int k = 0; k < layers[i + 1]; k++)
 			{
-				sum_errs += nuerals[i + 1][k] * weights[i].get(k, j);
+				sum_errs += weights[i].get(k, j) * nuerals_errs[i + 1][k];
 			}
 
-			current[i][j] = sum_errs * dSigm(nuerals[i][j]);
+			nuerals_errs[i][j] = sum_errs * dSigm(nuerals[i][j]);
 		}
 	}
 
-	for (int i = 0; i < n; i++)
+	value = 0;
+
+	for (int i = 0; i < layers[n - 1]; i++)
 	{
-		for (int j = 0; j < layers[i]; j++)
-		{
-			nuerals_errs[i][j] += current[i][j];
-		}
-
-		delete[] current[i];
+		value += (p[i] - nuerals[n - 1][i]) * (p[i] - nuerals[n - 1][i]);
 	}
 
-	delete[] current;
+	value /= layers[n - 1];
+
+	return value;
 }
 
+// Изменение значений весов
 void nueral_network::learn()
 {
+	for (int k = 0; k < n - 1; k++)
+	{
+		for (int i = 0; i < layers[k + 1]; i++)
+		{
+			for (int j = 0; j < layers[k]; j++)
+			{
+				weights[k].set(i, j, weights[k].get(i, j) + alpha * nuerals[k][j] * nuerals_errs[k + 1][i] + betta * d_weights[k].get(i, j));
+				d_weights[k].set(i, j, alpha * nuerals[k][j] * nuerals_errs[k + 1][i] + betta * d_weights[k].get(i, j));
+			}
+		}
+	}
 }

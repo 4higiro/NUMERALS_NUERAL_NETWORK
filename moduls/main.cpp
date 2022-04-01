@@ -1,10 +1,13 @@
+// Включаемые файлы
 #include <iostream>
 #include <fstream>
 
 #include "network.h"
 
+// Используемые имена
 using namespace std;
 
+// Ввод данных 
 void inputData(float* input, int n)
 {
 	for (int i = 0; i < n; i++)
@@ -16,6 +19,7 @@ void inputData(float* input, int n)
 	cout << endl;
 }
 
+// Ввод примеров для обучения
 void inputLearnData(float* input, float* p, int n, int m)
 {
 	for (int i = 0; i < n; i++)
@@ -33,14 +37,19 @@ void inputLearnData(float* input, float* p, int n, int m)
 	cout << endl;
 }
 
+// Точка входа в программу
 void main()
 {
+	// Утсановка русского языка
 	setlocale(LC_ALL, "Ru");
 
+	// Печать гиперпараметров
 	cout << "Нейронные вычисления задачи XOR" << endl;
 
 	int n = 3;
 	int layers[3] = { 2, 2, 1 };
+	float alpha = 1;
+	float betta = 0.5;
 
 	cout << "Конфигурация сети: " << "\t";
 
@@ -49,39 +58,40 @@ void main()
 		cout << layers[i] << "\t";
 	}
 
-	cout << endl;
+	cout << endl << "Скорость обучения: " << alpha << "  Момент: " << betta << endl << endl;
 
+	// Считывание примеров для обучения из файла
 	ifstream file;
-	file.open("resources/data.txt");
+	file.open("data.txt");
 
 	if (!file.is_open())
 	{
-		cout << "Файл не найден" << endl;
+		cout << "ФАЙЛ НЕ НАЙДЕН" << endl;
 		return;
 	}
 
-	int count;
+	int example_count;
+	file >> example_count;
 
-	file >> count;
+	float** examples = new float* [example_count];
+	float** predictions = new float* [example_count];
 
-	float** examples = new float* [count];
-
-	for (int i = 0; i < count; i++)
+	for (int i = 0; i < example_count; i++)
 	{
 		examples[i] = new float[layers[0]];
+		predictions[i] = new float[layers[n - 1]];
+	}
 
+	for (int i = 0; i < example_count; i++)
+	{
 		for (int j = 0; j < layers[0]; j++)
 		{
 			file >> examples[i][j];
 		}
 	}
 
-	float** predictions = new float* [count];
-
-	for (int i = 0; i < count; i++)
+	for (int i = 0; i < example_count; i++)
 	{
-		predictions[i] = new float[layers[n - 1]];
-
 		for (int j = 0; j < layers[n - 1]; j++)
 		{
 			file >> predictions[i][j];
@@ -90,22 +100,26 @@ void main()
 
 	file.close();
 
+	// Инициализация нейросети
 	nueral_network net;
-	net.init(layers, n);
+	net.init(layers, n, alpha, betta);
 
 	int pick = 0;
-
+	// Основной цикл программы
 	do
 	{
+		// Меню
 		cout << "Выберете нужный пункт меню:" << endl;
 		cout << "1 - Прямое распространение" << endl;
 		cout << "2 - Обратное распространение" << endl;
+		cout << "3 - Обучение по данным из файла" << endl;
 		cout << "// Введите что угодно для завершения работы" << endl;
 
 		cout << "Выбор: ";
 		cin >> pick;
 
 		float* input = new float[layers[0]];
+		float* output = new float[layers[n - 1]];
 		float result = 0;
 		int answer = 0;
 
@@ -113,46 +127,33 @@ void main()
 		{
 		case 1:
 			inputData(input, layers[0]);
-			result = 0;
 			answer = net.forwordPropagetion(result, input);
 			cout << "Ответ нейросети: " << answer << " (" << result << ")" << endl;
-			net.printNuerals();
-			cout << endl;
 			break;
 		case 2:
-			cout << "Обучающиe примеры:" << endl;
-			for (int i = 0; i < count; i++)
-			{
-				for (int j = 0; j < layers[0]; j++)
-				{
-					cout << examples[i][j] << "  ";
-				}
-
-				cout << " -->   ";
-
-				for (int j = 0; j < layers[n - 1]; j++)
-				{
-					cout << predictions[i][j] << "  ";
-				}
-
-				cout << endl;
-			}
+			inputLearnData(input, output, layers[0], layers[n - 1]);
 			net.printWeights();
-			for (int i = 0; i < count; i++)
-			{
-				net.backPropagetion(examples[i], predictions[i]);
-				net.printNuerals();
-			}
+			net.backPropagetion(input, output);
 			net.learn();
+			net.printWeights();
+			cout << endl;
+			break;
+		case 3:
+			net.printWeights();
+			for (int k = 0; k < 10000; k++)
+			{
+				for (int i = 0; i < example_count; i++)
+				{
+					net.backPropagetion(examples[i], predictions[i]);
+					net.learn();
+				}
+			}
 			net.printWeights();
 			break;
 		default:
 			return;
-			break;
 		}
-
-
-	} while (pick == 1 || pick == 2);
+	} while (pick == 1 || pick == 2 || pick == 3);
 	
 	system("pause");
 }

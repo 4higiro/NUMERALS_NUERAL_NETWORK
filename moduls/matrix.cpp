@@ -1,7 +1,9 @@
+// Включаеме файлы
 #include <iostream>
 
 #include "matrix.h"
 
+// Конструктор матрицы
 matrix::matrix()
 {
 	rows = 0;
@@ -9,6 +11,7 @@ matrix::matrix()
 	data = nullptr;
 }
 
+// Инициализация матрицы
 void matrix::init(int rows, int columns)
 {
 	data = new float* [rows];
@@ -22,6 +25,7 @@ void matrix::init(int rows, int columns)
 	this->columns = columns;
 }
 
+// Очистка матрицы
 void matrix::clear()
 {
 	for (int i = 0; i < rows; i++)
@@ -35,16 +39,19 @@ void matrix::clear()
 	columns = 0;
 }
 
+// Получение элемента матрицы
 float matrix::get(int i, int j)
 {
 	return data[i][j];
 }
 
+// Установка значения элементу матрицы
 void matrix::set(int i, int j, float element)
 {
 	data[i][j] = element;
 }
 
+// Заполнение матрицы псевдорандомными числами
 void matrix::setRandom(int seed)
 {
 	for (int i = 0; i < rows; i++)
@@ -60,11 +67,15 @@ void matrix::setRandom(int seed)
 				data[i][j] = (float)seed * i - (float)seed * j + seed + 1 + pow(i, j);
 			}
 
-			data[i][j] /= 10;
+			while (data[i][j] > 1.0)
+			{
+				data[i][j] /= 10.0;
+			}
 		}
 	}
 }
 
+// Заполнение матрицы нулями
 void matrix::setNULL()
 {
 	for (int i = 0; i < rows; i++)
@@ -76,6 +87,7 @@ void matrix::setNULL()
 	}
 }
 
+// Заполнение матрицы еденичками
 void matrix::setOnes()
 {
 	for (int i = 0; i < rows; i++)
@@ -87,6 +99,7 @@ void matrix::setOnes()
 	}
 }
 
+// Матрично-векторное умножение
 void matrix::multi(float* vector, float*& result)
 {
 	for (int i = 0; i < rows; i++)
@@ -100,16 +113,19 @@ void matrix::multi(float* vector, float*& result)
 	}
 }
 
+// Геттер количества строк
 int matrix::getRows()
 {
 	return rows;
 }
 
+// Геттер количества столбцов
 int matrix::getColumns()
 {
 	return columns;
 }
 
+// Вывод матрицы на экран
 void matrix::print()
 {
 	for (int i = 0; i < rows; i++)
