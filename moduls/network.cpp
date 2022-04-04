@@ -32,6 +32,9 @@ nueral_network::nueral_network()
 	nuerals = nullptr;
 	nuerals_errs = nullptr;
 
+	biases = nullptr;
+	d_biases = nullptr;
+
 	alpha = 0;
 	betta = 0;
 }
@@ -51,15 +54,24 @@ void nueral_network::init(int* layers, int n, float alpha, float betta)
 	nuerals = new float* [n];
 	nuerals_errs = new float* [n];
 
+	biases = new float* [n];
+	d_biases = new float* [n];
+
 	for (int i = 0; i < n; i++)
 	{
 		nuerals[i] = new float[this->layers[i]];
 		nuerals_errs[i] = new float[this->layers[i]];
 
+		biases[i] = new float[this->layers[i]];
+		d_biases[i] = new float[this->layers[i]];
+
 		for (int j = 0; j < this->layers[i]; j++)
 		{
 			nuerals[i][j] = 0;
 			nuerals_errs[i][j] = 0;
+
+			biases[i][j] = 0;
+			d_biases[i][j] = 0;
 		}
 	}
 
@@ -85,10 +97,14 @@ void nueral_network::clear()
 	{
 		delete[] nuerals[i];
 		delete[] nuerals_errs[i];
+		delete[] biases[i];
+		delete[] d_biases[i];
 	}
 
 	delete[] nuerals;
 	delete[] nuerals_errs;
+	delete[] biases;
+	delete[] d_biases;
 	delete[] weights;
 	delete[] layers;
 
@@ -107,8 +123,17 @@ void nueral_network::printWeights()
 
 	for (int i = 0; i < n - 1; i++)
 	{
-		cout << "Веса " << i << "->" << i + 1 << " : " << endl;
+		cout << "Weights " << i << "->" << i + 1 << " : " << endl;
 		weights[i].print();
+
+		cout << "Biases" << i + 1 << " : " << endl;
+
+		for (int j = 0; j < layers[i + 1]; j++)
+		{
+			cout << biases[i + 1][j] << "\t";
+		}
+
+		cout << endl;
 	}
 
 	cout << "====================================" << endl;
@@ -123,7 +148,7 @@ void nueral_network::printNuerals()
 
 	cout << "************************************" << endl;
 
-	cout << "Нейроны: " << endl;
+	cout << "Nuerals: " << endl;
 
 	for (int i = 0; i < n; i++)
 	{
@@ -159,7 +184,7 @@ int nueral_network::forwordPropagetion(float& value, float* vector)
 				sum += nuerals[i - 1][k] * weights[i - 1].get(j, k);
 			}
 
-			nuerals[i][j] = sigm(sum);
+			nuerals[i][j] = sigm(sum + biases[i][j]);
 		}
 	}
 
@@ -177,7 +202,7 @@ int nueral_network::forwordPropagetion(float& value, float* vector)
 
 	if (layers[n - 1] == 1)
 	{
-		if (nuerals[n - 1][0] > 0.6)
+		if (nuerals[n - 1][0] > 0.5)
 			return 1;
 		else
 			return 0;
@@ -237,6 +262,15 @@ void nueral_network::learn()
 				weights[k].set(i, j, weights[k].get(i, j) + alpha * nuerals[k][j] * nuerals_errs[k + 1][i] + betta * d_weights[k].get(i, j));
 				d_weights[k].set(i, j, alpha * nuerals[k][j] * nuerals_errs[k + 1][i] + betta * d_weights[k].get(i, j));
 			}
+		}
+	}
+
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < layers[i]; j++)
+		{
+			biases[i][j] += alpha * nuerals_errs[i][j] + betta * d_biases[i][j];
+			d_biases[i][j] = alpha * nuerals_errs[i][j] + betta * d_biases[i][j];
 		}
 	}
 }

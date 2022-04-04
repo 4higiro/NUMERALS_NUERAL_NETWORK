@@ -17,6 +17,9 @@ private:
 	float** nuerals; // Массив с нейронами
 	float** nuerals_errs; // Массив с ошибками нейронов
 
+	float** biases; // Массив с нейронами смещения
+	float** d_biases; // Массив с изменениями смещений на предыдущей итерации
+
 	float alpha; // Скорость обучения
 	float betta; // Момент
 
